@@ -16,10 +16,13 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.zonedabone.typocorrector.Metrics.Graph;
 
 public class TypoCorrector extends JavaPlugin implements Listener {
 
 	Map<String, String> replacements;
+	Tracker tracker;
+	Metrics metrics;
 
 	public void onEnable() {
 		new Thread(){
@@ -28,6 +31,21 @@ public class TypoCorrector extends JavaPlugin implements Listener {
 			}
 		}.start();
 		this.getServer().getPluginManager().registerEvents(this, this);
+		setupMetrics();
+	}
+	
+	private void setupMetrics(){
+		try {
+			metrics = new Metrics(this);
+		} catch (IOException e) {
+			e.printStackTrace();
+			return;
+		}
+		Graph g = metrics.createGraph("Typos Corrected");
+		tracker = new Tracker("Typos Corrected");
+		g.addPlotter(tracker);
+		metrics.addGraph(g);
+		metrics.start();
 	}
 
 	@EventHandler
@@ -49,6 +67,7 @@ public class TypoCorrector extends JavaPlugin implements Listener {
 		StringBuffer sb = new StringBuffer();
 
 		while (m.find()) {
+			tracker.increment();
 			String replace;
 			if (Character.isUpperCase(m.group().toCharArray()[0])) {
 				replace = Character.toUpperCase(m.group().toCharArray()[0])
@@ -99,4 +118,37 @@ public class TypoCorrector extends JavaPlugin implements Listener {
 		}
 	}
 
+	public class Tracker extends Metrics.Plotter {
+		 
+	    private final String name;
+	    private int value, last;
+	 
+	    public Tracker(String name) {
+	        this.name = name;
+	        this.value = 0;
+	        this.last = 0;
+	    }
+	 
+	    @Override
+	    public String getColumnName() {
+	        return this.name;
+	    }
+	 
+	    @Override
+	    public int getValue() {
+	        this.last = this.value;
+	        return this.value;
+	    }
+	 
+	    public void increment() {
+	        this.value++;
+	    }
+	 
+	    @Override
+	    public void reset() {
+	        this.value = this.value - this.last;
+	    }
+	 
+	}
+	
 }
