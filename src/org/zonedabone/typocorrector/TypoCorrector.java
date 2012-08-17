@@ -25,16 +25,16 @@ public class TypoCorrector extends JavaPlugin implements Listener {
 	Metrics metrics;
 
 	public void onEnable() {
-		new Thread(){
-			public void run(){
+		new Thread() {
+			public void run() {
 				loadTypos();
 			}
 		}.start();
 		this.getServer().getPluginManager().registerEvents(this, this);
 		setupMetrics();
 	}
-	
-	private void setupMetrics(){
+
+	private void setupMetrics() {
 		try {
 			metrics = new Metrics(this);
 		} catch (IOException e) {
@@ -53,13 +53,20 @@ public class TypoCorrector extends JavaPlugin implements Listener {
 		if (e.getPlayer().hasPermission("typo.correct")) {
 			String message = e.getMessage();
 			for (Map.Entry<String, String> typo : replacements.entrySet()) {
-				message = correct(message, typo.getKey(), typo.getValue());
+				message = correct(message, typo.getKey(), typo.getValue(), true);
+			}
+			e.setMessage(message);
+		} else if (e.getPlayer().hasPermission("typo.create")) {
+			String message = e.getMessage();
+			for (Map.Entry<String, String> typo : replacements.entrySet()) {
+				message = correct(message, typo.getValue(), typo.getKey(), false);
 			}
 			e.setMessage(message);
 		}
 	}
 
-	private String correct(String text, String typo, String replacement) {
+	private String correct(String text, String typo, String replacement,
+			boolean increment) {
 		Pattern p = Pattern.compile("\\b" + typo + "\\b",
 				Pattern.CASE_INSENSITIVE);
 		Matcher m = p.matcher(text);
@@ -67,7 +74,8 @@ public class TypoCorrector extends JavaPlugin implements Listener {
 		StringBuffer sb = new StringBuffer();
 
 		while (m.find()) {
-			tracker.increment();
+			if (increment)
+				tracker.increment();
 			String replace;
 			if (Character.isUpperCase(m.group().toCharArray()[0])) {
 				replace = Character.toUpperCase(m.group().toCharArray()[0])
@@ -119,36 +127,36 @@ public class TypoCorrector extends JavaPlugin implements Listener {
 	}
 
 	public class Tracker extends Metrics.Plotter {
-		 
-	    private final String name;
-	    private int value, last;
-	 
-	    public Tracker(String name) {
-	        this.name = name;
-	        this.value = 0;
-	        this.last = 0;
-	    }
-	 
-	    @Override
-	    public String getColumnName() {
-	        return this.name;
-	    }
-	 
-	    @Override
-	    public int getValue() {
-	        this.last = this.value;
-	        return this.value;
-	    }
-	 
-	    public void increment() {
-	        this.value++;
-	    }
-	 
-	    @Override
-	    public void reset() {
-	        this.value = this.value - this.last;
-	    }
-	 
+
+		private final String name;
+		private int value, last;
+
+		public Tracker(String name) {
+			this.name = name;
+			this.value = 0;
+			this.last = 0;
+		}
+
+		@Override
+		public String getColumnName() {
+			return this.name;
+		}
+
+		@Override
+		public int getValue() {
+			this.last = this.value;
+			return this.value;
+		}
+
+		public void increment() {
+			this.value++;
+		}
+
+		@Override
+		public void reset() {
+			this.value = this.value - this.last;
+		}
+
 	}
-	
+
 }
